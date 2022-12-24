@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -34,3 +34,11 @@ class Vehicle:
     d: List[float]
     t: List[float]
     frames: List[int]
+
+@dataclass
+class BehaviorStrategy:
+    name: str
+    group_names: Tuple[str, ...]
+    ak: np.matrix
+    bk: np.matrix
+    D: np.matrix
