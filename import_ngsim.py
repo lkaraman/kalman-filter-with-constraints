@@ -4,12 +4,20 @@ import numpy as np
 import pandas as pd
 
 from structs import Vehicle
+
+PATH_TO_CSV = 'data/measurements.csv'
+
 FINAL_VEH_ID = 20
+FEET_TO_M = 1 / 3.28
 
-def import_vehicles() -> List[Vehicle]:
 
+def read_ngsim_csv() -> List[Vehicle]:
+    """
+    Reads csv file which contains measurements for NGSIM dataset and converts it to internal vehicle structure
+    :return: list of vehicles
+    """
 
-    df = pd.read_csv('data/measurements.csv')
+    df = pd.read_csv(PATH_TO_CSV)
     df = df[df.Location == 'us-101']
 
     del df['Time_Headway']
@@ -17,7 +25,7 @@ def import_vehicles() -> List[Vehicle]:
     del df['Following']
     del df['Preceding']
 
-    out = []
+    vehicles: List[Vehicle] = []
 
     for i in range(2, FINAL_VEH_ID):
         df_current = df[df.Vehicle_ID == i]
@@ -26,20 +34,19 @@ def import_vehicles() -> List[Vehicle]:
         unique_frames = df_current.Total_Frames.unique()
 
         # Split vehicles with same id
-
         for jj in unique_frames:
             df_temp = df_current[df_current.Total_Frames == jj]
             frames = [int(i) for i in list(df_temp.Frame_ID.values)]
             t = [int(i) for i in list(df_temp.Global_Time.values)]
-            t = ((np.asarray(t) - t[0])/1000).tolist()
+            t = ((np.asarray(t) - t[0]) / 1000).tolist()
             v = Vehicle(
                 id=-1,
-                s=list(df_temp.Local_Y.values / 3.28),
-                d=list(df_temp.Local_X.values / 3.28),
+                s=list(df_temp.Local_Y.values * FEET_TO_M),
+                d=list(df_temp.Local_X.values * FEET_TO_M),
                 t=t,
                 frames=frames,
             )
 
-            out.append(v)
+            vehicles.append(v)
 
-    return out
+    return vehicles

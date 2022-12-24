@@ -1,5 +1,4 @@
 from math import exp
-from typing import Any
 
 import numpy as np
 import scipy
@@ -7,11 +6,16 @@ from filterpy.stats import logpdf
 from scipy.special import erf
 
 from gramm import mod_gramm_schmit
-from structs import KalmanOutput, RtsOutput
+from structs import KalmanOutput, RtsOutput, Vehicle
 
+# TODO OOP principles, please :D
 
-
-def apply_2d_constant_acceleration_filter(measured_data: Any):
+def apply_2d_ca_cv_filter(vehicle_measurements: Vehicle) -> KalmanOutput:
+    """
+    Uses forward ConstantAccelerationConstantVelocity Kalman filter on measurement data
+    :param vehicle_measurements: vehicle object containing long/lat measurements + time values
+    :return:
+    """
     T = 0.1
 
     A = np.matrix([
@@ -51,10 +55,10 @@ def apply_2d_constant_acceleration_filter(measured_data: Any):
 
     # Initial conditions
     x = np.matrix([
-        [measured_data.s[0]],
+        [vehicle_measurements.s[0]],
         [0],
         [0],
-        [measured_data.d[0]],
+        [vehicle_measurements.d[0]],
         [0]
     ])
 
@@ -63,7 +67,7 @@ def apply_2d_constant_acceleration_filter(measured_data: Any):
 
     nx = 5
     ny = 2
-    N = len(measured_data.t)
+    N = len(vehicle_measurements.t)
 
     PminusArr = np.zeros((nx, nx, N))
     PplusArr = np.zeros((nx, nx, N))
@@ -71,10 +75,10 @@ def apply_2d_constant_acceleration_filter(measured_data: Any):
     xhatplusArr = np.zeros((nx, N))
     KArr = np.zeros((nx, ny, N))
 
-    for k, t in enumerate(measured_data.t):
+    for k, t in enumerate(vehicle_measurements.t):
         y_meas = np.matrix([
-            [measured_data.s[k]],
-            [measured_data.d[k]]
+            [vehicle_measurements.s[k]],
+            [vehicle_measurements.d[k]]
         ])
 
         # Standard forward Kalman filter
@@ -102,7 +106,7 @@ def apply_2d_constant_acceleration_filter(measured_data: Any):
     )
 
 
-def apply_rts(ko: KalmanOutput):
+def apply_rts(ko: KalmanOutput) -> RtsOutput:
     nx = ko.A.shape[0]
     N = ko.K_arr.shape[2]
     xhatSmooth = ko.x_plus_arr[:, -1]

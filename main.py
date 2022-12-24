@@ -1,17 +1,13 @@
 from matplotlib import pyplot as plt
 
-from import_ngsim import import_vehicles
-from kalman import apply_2d_constant_acceleration_filter, apply_rts, strategy_acceleration
-from matplotlib import pyplot as plt
-
-from import_ngsim import import_vehicles
-from kalman import apply_2d_constant_acceleration_filter, apply_rts, strategy_acceleration
+from import_ngsim import read_ngsim_csv
+from kalman import apply_2d_ca_cv_filter, apply_rts, strategy_acceleration
 
 if __name__ == '__main__':
-    scenario = import_vehicles()
+    vehicles = read_ngsim_csv()
 
-    for i, data in enumerate(scenario):
-        kalman_output = apply_2d_constant_acceleration_filter(data)
+    for i, data in enumerate(vehicles):
+        kalman_output = apply_2d_ca_cv_filter(data)
         rts_o = apply_rts(kalman_output)
 
         a = kalman_output.x_plus_arr[2, :]
