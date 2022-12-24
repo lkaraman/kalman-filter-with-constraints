@@ -52,7 +52,7 @@ def apply_2d_constant_acceleration_filter(measured_data: Any):
     # Initial conditions
     x = np.matrix([
         [measured_data.s[0]],
-        [20],
+        [0],
         [0],
         [measured_data.d[0]],
         [0]
