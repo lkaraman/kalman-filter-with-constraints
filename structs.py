@@ -10,6 +10,7 @@ class MeasuredData:
     d: np.ndarray
     t: np.ndarray
 
+
 @dataclass
 class KalmanOutput:
     P_minus_arr: np.ndarray
@@ -27,6 +28,7 @@ class RtsOutput:
     K_smooth: np.ndarray
     P_smooth: np.ndarray
 
+
 @dataclass
 class Vehicle:
     id: int
@@ -34,6 +36,7 @@ class Vehicle:
     d: List[float]
     t: List[float]
     frames: List[int]
+
 
 @dataclass
 class BehaviorStrategy:

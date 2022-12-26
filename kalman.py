@@ -10,21 +10,71 @@ from gramm import mod_gramm_schmit
 from structs import KalmanOutput, RtsOutput, Vehicle, BehaviorStrategy
 
 
-# TODO OOP principles, please :D
-
 class KalmanFilterWithConstraints:
+    """
+    Implements all relevant Kalman filter methods
+        - forward Kalman filter
+        - RTS smoother
+        - probability truncation approach for constraints
+    """
 
     def __init__(self):
+        # Kalman matrices
+        self.A = None
+        self.C = None
+        self.Q = None
+        self.R = None
+        self.P = None
+
         self._behavior_strategy: Optional[BehaviorStrategy] = None
         self._kalman_output = None
+        self._initialize_kalman_matrices()
 
     @property
     def behavior_strategy(self):
         return self._behavior_strategy
 
     @behavior_strategy.setter
-    def behavior_strategy(self, value):
+    def behavior_strategy(self, value: BehaviorStrategy):
         self._behavior_strategy = value
+
+    def _initialize_kalman_matrices(self) -> None:
+        T = 0.1
+
+        self.A = np.matrix([
+            [1, T, T ** 2 / 2, 0, 0],
+            [0, 1, T, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, T],
+            [0, 0, 0, 0, 1]
+        ])
+
+        # we can only measure sd coordinates
+        self.C = np.matrix([
+            [1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0]
+        ])
+
+        self.Q = np.matrix([
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1]
+        ]) * 0.1
+
+        self.R = np.matrix([
+            [1, 0],
+            [0, 1]
+        ])
+
+        self.P = np.matrix([
+            [100, 0, 0, 0, 0],
+            [0, 100, 0, 0, 0],
+            [0, 0, 100, 0, 0],
+            [0, 0, 0, 100, 0],
+            [0, 0, 0, 0, 100]
+        ])
 
     def compute_probabilities_from_constraint_filtering(self, vehicle_measurements: Vehicle):
 
@@ -40,42 +90,6 @@ class KalmanFilterWithConstraints:
         :param vehicle_measurements: vehicle object containing long/lat measurements + time values
         :return:
         """
-        T = 0.1
-
-        A = np.matrix([
-            [1, T, T ** 2 / 2, 0, 0],
-            [0, 1, T, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 1, T],
-            [0, 0, 0, 0, 1]
-        ])
-
-        # we can only measure sd coordinates
-        C = np.matrix([
-            [1, 0, 0, 0, 0],
-            [0, 0, 0, 1, 0]
-        ])
-
-        Q = np.matrix([
-            [1, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 1]
-        ]) * 0.1
-
-        R = np.matrix([
-            [1, 0],
-            [0, 1]
-        ])
-
-        P = np.matrix([
-            [100, 0, 0, 0, 0],
-            [0, 100, 0, 0, 0],
-            [0, 0, 100, 0, 0],
-            [0, 0, 0, 100, 0],
-            [0, 0, 0, 0, 100]
-        ])
 
         # Initial conditions
         x = np.matrix([
@@ -86,7 +100,7 @@ class KalmanFilterWithConstraints:
             [0]
         ])
 
-        P_plus = P.copy()
+        P_plus = self.P.copy()
         x_est_plus = x.copy()
 
         nx = 5
@@ -106,11 +120,11 @@ class KalmanFilterWithConstraints:
             ])
 
             # Standard forward Kalman filter
-            P_minus = A @ P_plus @ A.T + Q
-            K = P_minus @ C.T @ np.linalg.inv(C @ P_minus @ C.T + R)
-            x_est_minus = A @ x_est_plus
-            x_est_plus = x_est_minus + K @ (y_meas - C @ x_est_minus)
-            P_plus = P_minus - K @ C @ P_minus
+            P_minus = self.A @ P_plus @ self.A.T + self.Q
+            K = P_minus @ self.C.T @ np.linalg.inv(self.C @ P_minus @ self.C.T + self.R)
+            x_est_minus = self.A @ x_est_plus
+            x_est_plus = x_est_minus + K @ (y_meas - self.C @ x_est_minus)
+            P_plus = P_minus - K @ self.C @ P_minus
 
             KArr[:, :, k] = K
             PminusArr[:, :, k] = P_minus
@@ -125,7 +139,7 @@ class KalmanFilterWithConstraints:
             x_minus_arr=xhatminusArr,
             x_plus_arr=xhatplusArr,
             K_arr=KArr,
-            A=A
+            A=self.A
 
         )
 
@@ -158,6 +172,7 @@ class KalmanFilterWithConstraints:
             K_smooth=KSmootherArr,
             P_smooth=PSmootherArr
         )
+
     def apply_constraint_filter(self, rts_output: RtsOutput):
         N = rts_output.x_smooth.shape[1]
         # assert N == 200
@@ -170,7 +185,6 @@ class KalmanFilterWithConstraints:
         num_of_sets = len(self._behavior_strategy.group_names)
 
         pdfs = [[] for _ in range(num_of_sets)]
-
 
         for i in range(N):
             P_plus = rts_output.P_smooth[:, :, i]
@@ -191,7 +205,6 @@ class KalmanFilterWithConstraints:
                 cTrunc = (ak[jj] - D[jj, :] @ xTrunc) / np.sqrt(D[jj, :] @ PTrunc @ D[jj, :].T)
                 dTrunc = (bk[jj] - D[jj, :] @ xTrunc) / np.sqrt(D[jj, :] @ PTrunc @ D[jj, :].T)
 
-
                 alpha = np.sqrt(2 / np.pi) / (erf(dTrunc / np.sqrt(2)) - erf(cTrunc / np.sqrt(2)))
                 mu = alpha * (np.exp(-cTrunc ** 2 / 2) - np.exp(-dTrunc ** 2 / 2))
                 sigma2 = alpha * (np.exp(-cTrunc ** 2 / 2) * (cTrunc - 2 * mu) - np.exp(
@@ -207,8 +220,7 @@ class KalmanFilterWithConstraints:
                 CovZ[0, 0] = sigma2
                 xTrunc = Ttrunc @ scipy.linalg.sqrtm(Wtrunc) @ S.T @ zTrunc + xTrunc
                 PTruncnew = Ttrunc @ scipy.linalg.sqrtm(Wtrunc) @ S.T @ CovZ @ S @ scipy.linalg.sqrtm(Wtrunc) @ Ttrunc.T
-                print(f'step: {i}\talpha {mu}\tmi: {mu}\tsigma2: {sigma2}')
-
+                # print(f'step: {i}\talpha {mu}\tmi: {mu}\tsigma2: {sigma2}')
 
                 r = x_est_plus - xTrunc
                 S_s = PTruncnew

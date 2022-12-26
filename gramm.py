@@ -3,6 +3,11 @@ import scipy.linalg
 
 
 def mod_gramm_schmit(A: np.ndarray) -> (np.ndarray, np.ndarray):
+    """
+    Gramm-Schmidt orthogonalization - decomposition of A to TWT.t
+    :param A: matrix to be decomposed
+    :return: matrices W and T
+    """
     eps = 1e-12
 
     m, n = A.shape
