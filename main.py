@@ -19,14 +19,16 @@ if __name__ == '__main__':
     velocity_forward = kalman_out.x_plus_arr[1, :]
     velocity_rts = rts_out.x_smooth[1, :]
 
+    plt.figure(1)
     plt.plot(vehicle_measurements.s, velocity_forward, label='Kalman')
     plt.plot(vehicle_measurements.s, velocity_rts, label='RTS')
     plt.legend()
     plt.title('Velocity profile')
-    plt.figure(1)
 
+    plt.figure(2)
     plt.plot(vehicle_measurements.s, probs[0], label='cruise')
     plt.plot(vehicle_measurements.s, probs[1], label='acc')
     plt.plot(vehicle_measurements.s, probs[2], label='brk')
     plt.legend()
+
     plt.show()

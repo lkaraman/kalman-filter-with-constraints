@@ -3,8 +3,9 @@ from typing import Optional
 
 import numpy as np
 import scipy
-from filterpy.stats import logpdf
+
 from scipy.special import erf
+from scipy.stats import multivariate_normal
 
 from gramm import mod_gramm_schmit
 from structs import KalmanOutput, RtsOutput, Vehicle, BehaviorStrategy
@@ -157,7 +158,7 @@ class KalmanFilterWithConstraints:
         xhatSmooth = np.atleast_2d(xhatSmooth).T
 
         for k in range(N - 1, 0, -1):
-            print(k)
+            # print(k)
             K = ko.P_plus_arr[:, :, k - 1] @ ko.A.T @ np.linalg.inv((ko.P_minus_arr[:, :, k]))
             PSmooth = ko.P_plus_arr[:, :, k - 1] - K @ (ko.P_minus_arr[:, :, k] - PSmooth) @ K.T
             xhatSmooth = np.array(
@@ -224,7 +225,7 @@ class KalmanFilterWithConstraints:
 
                 r = x_est_plus - xTrunc
                 S_s = PTruncnew
-                pdf = exp(logpdf(x=r, cov=S_s))
+                pdf = exp(multivariate_normal.logpdf(x=r, cov=S_s))
 
                 pdfs[jj].append(pdf)
 
